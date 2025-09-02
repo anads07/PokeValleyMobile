@@ -31,6 +31,18 @@ export default function GameScreen() {
         darkGray: '#333333',
     };
 
+    // arrumando as gerações
+    const romanToNumber = {
+        i: 1,
+        ii: 2,
+        iii: 3,
+        iv: 4,
+        v: 5,
+        vi: 6,
+        vii: 7,
+        viii: 8,
+    };
+
     // Função para buscar um Pokémon aleatório
     const fetchRandomPokemon = async () => {
         setLoading(true);
@@ -41,7 +53,7 @@ export default function GameScreen() {
         setGameOver(false);
         setError('');
         try {
-            const randomId = Math.floor(Math.random() * 1025) + 1; // 1 a 1025
+            const randomId = Math.floor(Math.random() * 721) + 1; // 1 a 721 (Gerações 1 a 6)
             const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
             const data = response.data;
             
@@ -136,6 +148,7 @@ export default function GameScreen() {
                 isCorrect: normalizedGuess === pokemon.name.toLowerCase(),
             };
 
+            // adiciona no fim da lista
             setGuesses([...guesses, newGuess]);
 
             if (normalizedGuess === pokemon.name.toLowerCase()) {
@@ -171,6 +184,29 @@ export default function GameScreen() {
         } else {
             return { color: colors.incorrect, arrow: '↓' };
         }
+    };
+    
+    const getComparisonText = (guessedLabel, guessedValue, correctValue, unit = '', isNumeric = false) => {
+        let backgroundColor;
+        let text = `${guessedLabel}: ${guessedValue}`;
+        let arrow = '';
+
+        if (isNumeric) {
+            const result = checkHeightWeight(guessedValue, correctValue);
+            backgroundColor = result.color;
+            arrow = result.arrow;
+            text = `${guessedLabel}: ${guessedValue / 10} ${unit} ${arrow}`;
+        } else if (Array.isArray(guessedValue) && Array.isArray(correctValue)) {
+            const isCorrect = guessedValue.some(val => correctValue.includes(val));
+            backgroundColor = isCorrect ? colors.correct : colors.incorrect;
+            text = `${guessedLabel}: ${guessedValue.join(', ')}`;
+        } else {
+            const isCorrect = guessedValue && correctValue && guessedValue.toLowerCase() === correctValue.toLowerCase();
+            backgroundColor = isCorrect ? colors.correct : colors.incorrect;
+            text = `${guessedLabel}: ${guessedValue}`;
+        }
+
+        return { text, backgroundColor };
     };
 
     if (loading) {
@@ -240,7 +276,7 @@ export default function GameScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Parabéns!</Text>
-                        <Text style={styles.modalSubtitle}>Você adivinhou o Pokémon em {guesses.length} palpites!</Text>
+                        <Text style={styles.modalSubtitle}>Você adivinhou o Pokémon!</Text>
                         <Image source={{ uri: pokemon.image }} style={styles.winPokemonImage} />
                         <Text style={styles.winPokemonName}>{pokemon.name.toUpperCase()}</Text>
                         <TouchableOpacity style={[styles.modalButton, {backgroundColor: colors.correct}]} onPress={() => {
@@ -258,7 +294,10 @@ export default function GameScreen() {
                 <Text style={styles.mainTitle}>POKEVALLEY</Text>
                 
                 <View style={styles.guessBox}>
-                    <Text style={styles.guessBoxText}>Adivinhe qual o pokémon!</Text>
+                    <Text style={styles.guessBoxText}>
+                        Adivinhe qual
+                        o pokémon!
+                    </Text>
                 </View>
 
                 {/* Campo de input e botão */}
@@ -270,12 +309,13 @@ export default function GameScreen() {
                     <View style={styles.inputSection}>
                         <TextInput
                             style={styles.input}
-                            placeholder="Escreva o nome de um pokémon"
+                            placeholder="Escreva um pokémon"
                             placeholderTextColor={colors.darkGray}
                             value={guess}
                             onChangeText={setGuess}
                             onSubmitEditing={handleGuess}
                             editable={!gameOver}
+                            underlineColorAndroid="transparent"
                         />
                         <TouchableOpacity style={styles.sendButton} onPress={handleGuess} disabled={gameOver}>
                             <Image source={require('../assets/src/seta.png')} style={styles.sendButtonImage} />
@@ -285,7 +325,7 @@ export default function GameScreen() {
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                 {/* Resultados dos palpites */}
-                <ScrollView style={styles.guessesContainer}>
+                <ScrollView style={styles.guessesContainer} inverted={true}>
                     {guesses.map((g, index) => (
                         <View key={index} style={styles.guessItem}>
                             <View style={styles.guessedPokemonImageContainer}>
@@ -294,19 +334,19 @@ export default function GameScreen() {
                             </View>
                             <View style={styles.characteristicsContainer}>
                                 <View style={styles.row}>
-                                    <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.types, pokemon.types) }]}>
-                                        Tipo 1: {g.types[0]}
+                                    <Text style={[styles.characteristic, { backgroundColor: getComparisonText('Tipo 1', g.types[0], pokemon.types[0]).backgroundColor }]}>
+                                        {getComparisonText('Tipo 1', g.types[0], pokemon.types[0]).text}
                                     </Text>
-                                    <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.types, pokemon.types) }]}>
-                                        Tipo 2: {g.types.length > 1 ? g.types[1] : 'N/A'}
+                                    <Text style={[styles.characteristic, { backgroundColor: getComparisonText('Tipo 2', g.types.length > 1 ? g.types[1] : 'N/A', pokemon.types.length > 1 ? pokemon.types[1] : 'N/A').backgroundColor }]}>
+                                        {getComparisonText('Tipo 2', g.types.length > 1 ? g.types[1] : 'N/A', pokemon.types.length > 1 ? pokemon.types[1] : 'N/A').text}
                                     </Text>
                                 </View>
                                 <View style={styles.row}>
-                                    <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.color, pokemon.color) }]}>
-                                        Cor: {g.color}
+                                    <Text style={[styles.characteristic, { backgroundColor: getComparisonText('Cor', g.color, pokemon.color).backgroundColor }]}>
+                                        {getComparisonText('Cor', g.color, pokemon.color).text}
                                     </Text>
-                                    <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.habitat, pokemon.habitat) }]}>
-                                        Habitat: {g.habitat}
+                                    <Text style={[styles.characteristic, { backgroundColor: getComparisonText('Habitat', g.habitat, pokemon.habitat).backgroundColor }]}>
+                                        {getComparisonText('Habitat', g.habitat, pokemon.habitat).text}
                                     </Text>
                                 </View>
                                 <View style={styles.row}>
@@ -318,9 +358,9 @@ export default function GameScreen() {
                                     </Text>
                                 </View>
                                 <View style={styles.row}>
-                                    <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.generation, pokemon.generation) }]}>
-                                        Geração: {g.generation.split('-')[1]}
-                                    </Text>
+                                <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.generation, pokemon.generation) }]}>
+                                    Geração: {romanToNumber[g.generation.toLowerCase().replace('generation-', '')] || g.generation}
+                                </Text>
                                     <Text style={[styles.characteristic, { backgroundColor: checkCharacteristic(g.evolutionStage, pokemon.evolutionStage) }]}>
                                         Evolução: {g.evolutionStage}
                                     </Text>
@@ -338,11 +378,18 @@ export default function GameScreen() {
 }
 
 const styles = StyleSheet.create({
+    container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+  },
     backgroundImage: {
-        flex: 1,
-        width: '100%',
-        height: '100%',
-    },
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
     topBar: {
         position: 'absolute',
         top: 0,
@@ -370,7 +417,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     guessBox: {
-        width: '80%',
+        width: '90%',
         backgroundColor: '#f1f9c7',
         borderColor: '#000',
         borderWidth: 2,
@@ -385,6 +432,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#000',
         textAlign: 'center',
+        lineHeight: 20,
+        letterSpacing: 1,
     },
     inputSectionImage: {
         width: '90%',
@@ -394,14 +443,18 @@ const styles = StyleSheet.create({
     inputSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
     },
     input: {
         flex: 1,
         fontFamily: 'PressStart2P-Regular',
-        fontSize: 14,
+        fontSize: 10,
         color: '#333',
-        paddingHorizontal: 15,
+        paddingHorizontal: 20,
+        paddingVertical: 5,
+        textAlign: 'center',
+        borderWidth: 0,
+        outlineStyle: 'none',
+        outlineWidth: 0,
     },
     sendButton: {
         width: 40,
@@ -415,10 +468,11 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
     },
     errorText: {
-        color: 'red',
+        color: '#e97d6a',
         marginTop: 5,
         fontSize: 12,
         fontFamily: 'PressStart2P-Regular',
+        textAlign: 'center',
     },
     guessesContainer: {
         flex: 1,
@@ -435,13 +489,13 @@ const styles = StyleSheet.create({
     },
     guessedPokemonImageContainer: {
         position: 'relative',
-        width: 100,
-        height: 100,
+        width: 120, 
+        height: 120, 
         marginRight: 10,
     },
     guessedPokemonImage: {
-        width: 100,
-        height: 100,
+        width: 120, 
+        height: 120,
         resizeMode: 'contain',
     },
     guessedPokemonName: {
@@ -453,7 +507,7 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#000',
         textAlign: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+       
         paddingVertical: 2,
     },
     characteristicsContainer: {
@@ -462,7 +516,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 5,
+        marginBottom: 2,
     },
     characteristic: {
         fontFamily: 'PressStart2P-Regular',
@@ -472,7 +526,7 @@ const styles = StyleSheet.create({
         color: '#000',
         textAlign: 'center',
         flex: 1,
-        marginHorizontal: 2,
+        marginHorizontal: 1, 
     },
     modalOverlay: {
         flex: 1,
@@ -507,6 +561,7 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
         marginTop: 5,
+        lineHeight: 15
     },
     rulesScrollView: {
         maxHeight: 200,
@@ -516,6 +571,8 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: '#000',
         marginBottom: 8,
+        textAlign: 'center', 
+        lineHeight: 15
     },
     modalButton: {
         marginTop: 20,
@@ -557,10 +614,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',     
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+},
     loadingText: {
-        marginTop: 10,
-        fontSize: 18,
-        color: '#fff',
-        fontFamily: 'PressStart2P-Regular',
-    }
+    fontFamily: 'PressStart2P-Regular',
+    fontSize: 14,                        
+    color: '#ffffff',                 
+    textAlign: 'center',
+    marginTop: 10,
+},
+
 });
